@@ -172,4 +172,5 @@ for i, ex in enumerate(day_data):
                 st.rerun()
         if c2.button("🗑️", key=f"del_{i}"):
             day_data.pop(i)
-            save_data(st.session_state.db
+            save_data(st.session_state.db)
+            st.rerun()
