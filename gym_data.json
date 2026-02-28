@@ -1,0 +1,242 @@
+{
+    "days": {
+        "2026-03-02": {
+            "template": "А",
+            "exercises": [
+                {
+                    "name": "Б",
+                    "sets": []
+                },
+                {
+                    "name": "В",
+                    "sets": []
+                }
+            ]
+        },
+        "2026-03-06": {
+            "template": "А",
+            "exercises": [
+                {
+                    "name": "Б",
+                    "sets": []
+                },
+                {
+                    "name": "В",
+                    "sets": []
+                }
+            ]
+        },
+        "2026-03-09": {
+            "template": "А",
+            "exercises": [
+                {
+                    "name": "Б",
+                    "sets": []
+                },
+                {
+                    "name": "В",
+                    "sets": []
+                }
+            ]
+        },
+        "2026-03-13": {
+            "template": "А",
+            "exercises": [
+                {
+                    "name": "Б",
+                    "sets": []
+                },
+                {
+                    "name": "В",
+                    "sets": []
+                }
+            ]
+        },
+        "2026-03-16": {
+            "template": "А",
+            "exercises": [
+                {
+                    "name": "Б",
+                    "sets": []
+                },
+                {
+                    "name": "В",
+                    "sets": []
+                }
+            ]
+        },
+        "2026-03-20": {
+            "template": "А",
+            "exercises": [
+                {
+                    "name": "Б",
+                    "sets": []
+                },
+                {
+                    "name": "В",
+                    "sets": []
+                }
+            ]
+        },
+        "2026-03-23": {
+            "template": "А",
+            "exercises": [
+                {
+                    "name": "Б",
+                    "sets": []
+                },
+                {
+                    "name": "В",
+                    "sets": []
+                }
+            ]
+        },
+        "2026-03-27": {
+            "template": "А",
+            "exercises": [
+                {
+                    "name": "Б",
+                    "sets": []
+                },
+                {
+                    "name": "В",
+                    "sets": []
+                }
+            ]
+        },
+        "2026-03-30": {
+            "template": "А",
+            "exercises": [
+                {
+                    "name": "Б",
+                    "sets": []
+                },
+                {
+                    "name": "В",
+                    "sets": []
+                }
+            ]
+        },
+        "2026-04-03": {
+            "template": "А",
+            "exercises": [
+                {
+                    "name": "Б",
+                    "sets": []
+                },
+                {
+                    "name": "В",
+                    "sets": []
+                }
+            ]
+        },
+        "2026-04-06": {
+            "template": "А",
+            "exercises": [
+                {
+                    "name": "Б",
+                    "sets": []
+                },
+                {
+                    "name": "В",
+                    "sets": []
+                }
+            ]
+        },
+        "2026-04-10": {
+            "template": "А",
+            "exercises": [
+                {
+                    "name": "Б",
+                    "sets": []
+                },
+                {
+                    "name": "В",
+                    "sets": []
+                }
+            ]
+        },
+        "2026-04-13": {
+            "template": "А",
+            "exercises": [
+                {
+                    "name": "Б",
+                    "sets": []
+                },
+                {
+                    "name": "В",
+                    "sets": []
+                }
+            ]
+        },
+        "2026-04-17": {
+            "template": "А",
+            "exercises": [
+                {
+                    "name": "Б",
+                    "sets": []
+                },
+                {
+                    "name": "В",
+                    "sets": []
+                }
+            ]
+        },
+        "2026-04-20": {
+            "template": "А",
+            "exercises": [
+                {
+                    "name": "Б",
+                    "sets": []
+                },
+                {
+                    "name": "В",
+                    "sets": []
+                }
+            ]
+        },
+        "2026-04-24": {
+            "template": "А",
+            "exercises": [
+                {
+                    "name": "Б",
+                    "sets": []
+                },
+                {
+                    "name": "В",
+                    "sets": []
+                }
+            ]
+        },
+        "2026-04-27": {
+            "template": "А",
+            "exercises": [
+                {
+                    "name": "Б",
+                    "sets": []
+                },
+                {
+                    "name": "В",
+                    "sets": []
+                }
+            ]
+        }
+    },
+    "templates": {
+        "перед": [
+            "жим",
+            "бицепс"
+        ],
+        "спина": [
+            "потягивания",
+            "трицепс"
+        ],
+        "А": [
+            "Б",
+            "В"
+        ]
+    },
+    "tmpl_colors": {
+        "А": "#dc08c4"
+    }
+}
