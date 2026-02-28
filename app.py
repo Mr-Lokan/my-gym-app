@@ -5,47 +5,54 @@ import pandas as pd
 from datetime import datetime, timedelta
 import calendar
 
-st.set_page_config(page_title="Gym Legend Compact", layout="centered")
+st.set_page_config(page_title="Gym Legend Fix", layout="centered")
 
-# --- СТИЛИ ДЛЯ МИКРО-КНОПОК ---
+# --- УЛЬТРА-ФИКС ДЛЯ МОБИЛЬНОЙ СЕТКИ ---
 st.markdown("""
 <style>
-    /* Убираем отступы контейнера */
-    .block-container { padding-top: 1rem !important; }
+    /* ГЛАВНЫЙ ХАК: Запрещаем колонкам стакаться в столбик */
+    [data-testid="stHorizontalBlock"] {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 2px !important;
+    }
     
-    /* Делаем колонки узкими и в один ряд */
     [data-testid="column"] {
+        width: 14% !important;
         flex: 1 1 0% !important;
         min-width: 0px !important;
-        padding: 0 2px !important;
     }
 
-    /* МИКРО-КНОПКИ */
+    /* КНОПКИ: Маленькие, квадратные, без лишних отступов */
     div.stButton > button {
         width: 100% !important;
-        height: 35px !important; /* Жесткая высота */
+        height: 32px !important;
         padding: 0px !important;
-        font-size: 13px !important;
-        border-radius: 6px !important;
+        font-size: 11px !important;
+        font-weight: bold !important;
+        border-radius: 4px !important;
         background-color: #1e2124 !important;
         border: 1px solid #333 !important;
-        color: white !important;
     }
 
-    /* Точка под числом */
+    /* ТОЧКА ПОД ЧИСЛОМ */
     .cal-dot {
         width: 4px;
         height: 4px;
         border-radius: 50%;
-        margin: -8px auto 4px auto;
+        margin: -6px auto 4px auto;
         display: block;
     }
-    
-    .day-name {
+
+    .wd-header {
         text-align: center;
-        font-size: 10px;
+        font-size: 9px;
         color: #888;
         margin-bottom: 2px;
+        font-weight: bold;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -71,15 +78,15 @@ if 'sel_date' not in st.session_state:
 
 st.title("🏋️ Gym Legend")
 
-# Компактный выбор месяца
+# Выбор месяца
 c1, c2 = st.columns([2, 1])
 m_idx = c1.selectbox("Месяц", range(1, 13), index=datetime.now().month-1, label_visibility="collapsed")
 y_val = c2.number_input("Год", value=2026, label_visibility="collapsed")
 
-# Шапка дней недели
+# Заголовки (Пн-Вс)
 h_cols = st.columns(7)
 for i, d_n in enumerate(["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]):
-    h_cols[i].markdown(f"<div class='day-name'>{d_n}</div>", unsafe_allow_html=True)
+    h_cols[i].markdown(f"<div class='wd-header'>{d_n}</div>", unsafe_allow_html=True)
 
 # Сетка календаря
 cal = calendar.monthcalendar(y_val, m_idx)
@@ -93,7 +100,7 @@ for week in cal:
             if cols[i].button(str(day), key=f"d_{d_str}"):
                 st.session_state.sel_date = d_str
             
-            # Точка индикатор
+            # Индикатор (точка)
             if d_str in data["days"]:
                 tmpl = data["days"][d_str].get("template")
                 color = data["tmpl_colors"].get(tmpl, "#58A6FF")
@@ -101,9 +108,9 @@ for week in cal:
 
 st.divider()
 
-# РАБОТА С ЗАПИСЯМИ
+# ЖУРНАЛ ВЫБРАННОГО ДНЯ
 curr_d = st.session_state.sel_date
-st.markdown(f"### 📅 {curr_d}")
+st.markdown(f"#### 📝 {curr_d}")
 
 day_info = data["days"].get(curr_d, {"exercises": []})
 ex_list = day_info.get("exercises", [])
@@ -111,9 +118,9 @@ ex_list = day_info.get("exercises", [])
 if ex_list:
     for i, ex in enumerate(ex_list):
         with st.container(border=True):
-            cols = st.columns([5, 1])
-            cols[0].write(f"**{ex['name'].upper()}**")
-            if cols[1].button("❌", key=f"del_{i}"):
+            col_t, col_btn = st.columns([5, 1])
+            col_t.write(f"**{ex['name'].upper()}**")
+            if col_btn.button("🗑️", key=f"del_{i}"):
                 ex_list.pop(i); save_data(data); st.rerun()
             
             for s in ex.get("sets", []):
