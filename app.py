@@ -3,18 +3,17 @@ import json
 import os
 import calendar
 from datetime import datetime
+import streamlit.components.v1 as components
 
-# Настройка
 st.set_page_config(page_title="Gym Legend", layout="centered")
 
-# --- СТИЛИ ДЛЯ ЖЕСТКОЙ СЕТКИ КАЛЕНДАРЯ ---
+# --- СТИЛИ И СКРИПТ ДЛЯ КЛИКАБЕЛЬНОСТИ ---
 st.markdown("""
 <style>
     [data-testid="stHeader"] { display: none; }
     .stApp { background-color: #0d1117; }
     .block-container { padding-top: 1rem !important; max-width: 400px !important; }
     
-    /* Таблица календаря */
     .cal-table { width: 100%; border-collapse: separate; border-spacing: 4px; table-layout: fixed; }
     .cal-table th { color: #8b949e; font-size: 11px; text-align: center; font-weight: 400; padding-bottom: 8px; }
     
@@ -24,40 +23,25 @@ st.markdown("""
         border-radius: 8px;
         height: 45px;
         text-align: center;
-        vertical-align: middle;
-        cursor: pointer;
-        position: relative;
         color: #f0f6fc;
         font-size: 14px;
+        cursor: pointer;
+        position: relative;
         transition: 0.2s;
     }
-    .cal-day:active { background: #1f6feb; }
-    .cal-day.selected { border: 2px solid #58a6ff; background: #1c2128; }
-    .cal-day.empty { background: transparent; border: none; }
+    .cal-day:hover { border-color: #58a6ff; }
+    .cal-day.selected { border: 2px solid #58a6ff; background: #1c2128; box-shadow: 0 0 10px rgba(88,166,255,0.2); }
+    .cal-day.empty { background: transparent; border: none; cursor: default; }
     
-    /* Точка тренировки */
     .dot {
         position: absolute;
-        bottom: 5px;
+        bottom: 4px;
         left: 50%;
         transform: translateX(-50%);
         width: 4px;
         height: 4px;
         background-color: #58a6ff;
         border-radius: 50%;
-        box-shadow: 0 0 5px #58a6ff;
-    }
-
-    /* Заголовок месяца */
-    .month-header {
-        text-align: center;
-        color: white;
-        font-size: 20px;
-        font-weight: 700;
-        margin-bottom: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -78,99 +62,102 @@ def save_data(data):
 if 'db' not in st.session_state:
     st.session_state.db = load_data()
 
-# Инициализация выбранной даты
-if 'selected_date' not in st.session_state:
-    st.session_state.selected_date = datetime.now().date()
-if 'view_month' not in st.session_state:
-    st.session_state.view_month = datetime.now().month
-if 'view_year' not in st.session_state:
-    st.session_state.view_year = datetime.now().year
+# Инициализация состояния
+if 'view_month' not in st.session_state: st.session_state.view_month = datetime.now().month
+if 'view_year' not in st.session_state: st.session_state.view_year = datetime.now().year
+if 'sel_date_str' not in st.session_state: st.session_state.sel_date_str = datetime.now().strftime("%Y-%m-%d")
 
-# --- ОТРИСОВКА КАЛЕНДАРЯ ---
-st.markdown(f"<div class='month-header'><span>{calendar.month_name[st.session_state.view_month]} {st.session_state.view_year}</span></div>", unsafe_allow_html=True)
+# --- КОМПОНЕНТ КАЛЕНДАРЯ ---
+def draw_calendar():
+    curr_month = st.session_state.view_month
+    curr_year = st.session_state.view_year
+    cal = calendar.monthcalendar(curr_year, curr_month)
+    month_name = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"][curr_month-1]
+    
+    rows_html = ""
+    for week in cal:
+        rows_html += "<tr>"
+        for day in week:
+            if day == 0:
+                rows_html += '<td class="cal-day empty"></td>'
+            else:
+                d_str = f"{curr_year}-{curr_month:02d}-{day:02d}"
+                is_sel = "selected" if d_str == st.session_state.sel_date_str else ""
+                has_work = '<div class="dot"></div>' if d_str in st.session_state.db["days"] and st.session_state.db["days"][d_str] else ""
+                rows_html += f'<td class="cal-day {is_sel}" onclick="selectDate(\'{d_str}\')">{day}{has_work}</td>'
+        rows_html += "</tr>"
 
-# Кнопки переключения месяца (в ряд)
-col_m1, col_m2, col_m3 = st.columns([1,2,1])
-if col_m1.button("←", key="prev"):
+    html_code = f"""
+    <div style="color:white; text-align:center; font-family:sans-serif; margin-bottom:10px;">
+        <b style="font-size:18px;">{month_name} {curr_year}</b>
+    </div>
+    <table class="cal-table">
+        <tr><th>ПН</th><th>ВТ</th><th>СР</th><th>ЧТ</th><th>ПТ</th><th>СБ</th><th>ВС</th></tr>
+        {rows_html}
+    </table>
+    <script>
+        function selectDate(date) {{
+            window.parent.postMessage({{type: 'streamlit:setComponentValue', value: date}}, '*');
+        }}
+    </script>
+    """
+    # Компонент возвращает выбранную дату при клике
+    return components.html(html_code, height=310)
+
+# Отрисовка
+col_nav1, col_nav2, col_nav3 = st.columns([1,2,1])
+if col_nav1.button("←"):
     st.session_state.view_month -= 1
-    if st.session_state.view_month == 0:
-        st.session_state.view_month = 12
-        st.session_state.view_year -= 1
+    if st.session_state.view_month == 0: st.session_state.view_month = 12; st.session_state.view_year -= 1
     st.rerun()
-if col_m3.button("→", key="next"):
+if col_nav3.button("→"):
     st.session_state.view_month += 1
-    if st.session_state.view_month == 13:
-        st.session_state.view_month = 1
-        st.session_state.view_year += 1
+    if st.session_state.view_month == 13: st.session_state.view_month = 1; st.session_state.view_year += 1
     st.rerun()
 
-# Генерируем HTML таблицу
-cal = calendar.monthcalendar(st.session_state.view_year, st.session_state.view_month)
-html_cal = '<table class="cal-table"><tr><th>ПН</th><th>ВТ</th><th>СР</th><th>ЧТ</th><th>ПТ</th><th>СБ</th><th>ВС</th></tr>'
-
-for week in cal:
-    html_cal += '<tr>'
-    for day in week:
-        if day == 0:
-            html_cal += '<td class="cal-day empty"></td>'
-        else:
-            d_str = f"{st.session_state.view_year}-{st.session_state.view_month:02d}-{day:02d}"
-            
-            # Проверяем наличие тренировки
-            has_workout = d_str in st.session_state.db["days"] and len(st.session_state.db["days"][d_str]) > 0
-            dot_html = '<div class="dot"></div>' if has_workout else ''
-            
-            # Проверяем, выбран ли этот день
-            is_selected = "selected" if d_str == st.session_state.selected_date.strftime("%Y-%m-%d") else ""
-            
-            # Мы используем st.button внутри ячейки для кликабельности, но это сложно. 
-            # Проще оставить выбор через слайдер или числовой ввод под календарем для стабильности.
-            html_cal += f'<td class="cal-day {is_selected}">{day}{dot_html}</td>'
-    html_cal += '</tr>'
-html_cal += '</table>'
-
-st.markdown(html_cal, unsafe_allow_html=True)
-
-# Выбор дня (чтобы календарь «ожил»)
-day_to_select = st.number_input("Выбери число для записи:", 1, 31, value=st.session_state.selected_date.day)
-st.session_state.selected_date = datetime(st.session_state.view_year, st.session_state.view_month, day_to_select).date()
-
-st.divider()
+new_date = draw_calendar()
+if new_date and new_date != st.session_state.sel_date_str:
+    st.session_state.sel_date_str = new_date
+    st.rerun()
 
 # --- СПИСОК УПРАЖНЕНИЙ ---
-target_str = st.session_state.selected_date.strftime("%Y-%m-%d")
-st.subheader(f"📅 {target_str}")
+st.markdown(f"### 📋 План: {st.session_state.sel_date_str}")
 
 if st.button("➕ ДОБАВИТЬ УПРАЖНЕНИЕ", use_container_width=True):
-    st.session_state.show_add = True
+    st.session_state.add_mode = True
 
-if st.session_state.get("show_add"):
-    with st.form("new_ex"):
+if st.session_state.get("add_mode"):
+    with st.form("add_ex"):
         name = st.text_input("Название")
         if st.form_submit_button("OK"):
-            if target_str not in st.session_state.db["days"]: st.session_state.db["days"][target_str] = []
-            st.session_state.db["days"][target_str].append({"name": name, "sets": []})
+            d_key = st.session_state.sel_date_str
+            if d_key not in st.session_state.db["days"]: st.session_state.db["days"][d_key] = []
+            st.session_state.db["days"][d_key].append({"name": name, "sets": []})
             save_data(st.session_state.db)
-            st.session_state.show_add = False
+            st.session_state.add_mode = False
             st.rerun()
 
-day_data = st.session_state.db["days"].get(target_str, [])
-for i, ex in enumerate(day_data):
-    with st.container(border=True):
-        st.write(f"**{ex['name'].upper()}**")
-        sets_preview = " | ".join([f"{s['w']}x{s['r']}" for s in ex.get('sets', [])])
-        st.caption(sets_preview if sets_preview else "Нет подходов")
-        
-        c1, c2 = st.columns([4, 1])
-        with c1.expander("Добавить сет"):
-            cw, cr, cb = st.columns([2, 2, 1])
-            w = cw.number_input("Кг", 0.0, step=0.5, key=f"w_{i}")
-            r = cr.number_input("Р", 0, step=1, key=f"r_{i}")
-            if cb.button("➕", key=f"btn_{i}"):
-                ex['sets'].append({"w": str(w), "r": str(r)})
+day_data = st.session_state.db["days"].get(st.session_state.sel_date_str, [])
+if not day_data:
+    st.caption("На этот день ничего нет")
+else:
+    for i, ex in enumerate(day_data):
+        with st.container(border=True):
+            st.write(f"**{ex['name'].upper()}**")
+            # Сеты
+            if ex.get('sets'):
+                st.write(" | ".join([f"{s['w']}×{s['r']}" for s in ex['sets']]))
+            
+            c1, c2 = st.columns([4, 1])
+            with c1.expander("Добавить подход"):
+                cw, cr, cb = st.columns([2, 2, 1])
+                w = cw.number_input("Кг", 0.0, step=0.5, key=f"w_{i}")
+                r = cr.number_input("Р", 0, step=1, key=f"r_{i}")
+                if cb.button("✅", key=f"ok_{i}"):
+                    ex['sets'].append({"w": str(w), "r": str(r)})
+                    save_data(st.session_state.db)
+                    st.rerun()
+            if c2.button("🗑️", key=f"del_{i}"):
+                day_data.pop(i)
                 save_data(st.session_state.db)
                 st.rerun()
-        if c2.button("🗑️", key=f"del_{i}"):
-            day_data.pop(i)
-            save_data(st.session_state.db)
-            st.rerun()
