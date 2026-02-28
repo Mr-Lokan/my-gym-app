@@ -1,31 +1,59 @@
 import streamlit as st
-import streamlit_antd_components as sac
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 
-# Настройки страницы
-st.set_page_config(page_title="Gym Legend Pro", layout="centered")
+# Настройка страницы
+st.set_page_config(page_title="Gym Legend", layout="centered")
 
-# --- СТИЛЬ «APPLE DARK MODE» ---
+# --- СТИЛИЗАЦИЯ ПОД APPLE HEALTH ---
 st.markdown("""
 <style>
     [data-testid="stHeader"] { display: none; }
     .block-container { padding-top: 1rem !important; max-width: 450px !important; }
     .stApp { background-color: #000000; }
     
+    /* Стилизация календаря */
+    .stDateInput div[data-baseweb="input"] {
+        background-color: #1c1c1e !important;
+        border: 1px solid #2c2c2e !important;
+        border-radius: 12px !important;
+        color: white !important;
+    }
+
     /* Карточка упражнения */
     .ex-card {
         background: #1c1c1e;
-        border-radius: 12px;
-        padding: 15px;
-        margin-top: 15px;
+        border-radius: 15px;
+        padding: 16px;
+        margin-top: 12px;
         border: 1px solid #2c2c2e;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
-    .ex-title { color: #ffffff; font-weight: 700; font-size: 16px; margin-bottom: 5px; text-transform: uppercase; }
+    .ex-title { 
+        color: #ffffff; 
+        font-weight: 800; 
+        font-size: 18px; 
+        letter-spacing: -0.5px;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+    }
+    .set-badge {
+        background: #2c2c2e;
+        color: #58A6FF;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 13px;
+        margin-right: 5px;
+        display: inline-block;
+        margin-bottom: 5px;
+    }
     
-    /* Убираем лишние отступы у стандартных виджетов */
-    .stNumberInput label { display: none; }
+    /* Кнопки */
+    .stButton>button {
+        border-radius: 12px !important;
+        font-weight: 600 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -47,42 +75,21 @@ def save_data(data):
 if 'db' not in st.session_state:
     st.session_state.db = load_data()
 
-# --- ИНТЕРФЕЙС ---
-st.markdown("<h2 style='color:white; text-align:center;'>🏋️ GYM LEGEND</h2>", unsafe_allow_html=True)
+# --- ВЕРХНЯЯ ЧАСТЬ ---
+st.markdown("<h1 style='text-align: center; color: white; font-size: 24px;'>GYM LEGEND</h1>", unsafe_allow_html=True)
 
-# 1. ВЫБОР ДНЯ (Красивая панель Ant Design)
-# Берем текущую неделю
-today = datetime.now().date()
-start_week = today - timedelta(days=today.weekday())
-days_items = []
+# Календарь (тот самый, удобный)
+d = st.date_input("Выбор даты", value=datetime.now(), label_visibility="collapsed")
+target_date = d.strftime("%Y-%m-%d")
 
-for i in range(7):
-    d = start_week + timedelta(days=i)
-    # Формируем подпись: Пн, Вт и т.д.
-    wd = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"][i]
-    days_items.append(sac.SegmentedItem(label=str(d.day), caption=wd))
-
-# Этот компонент идеально держит 7 колонок в ряд
-sel_idx = sac.segmented(
-    items=days_items,
-    index=today.weekday(),
-    align='center',
-    size='sm',
-    color='blue',
-    return_index=True
-)
-
-target_date = (start_week + timedelta(days=sel_idx)).strftime("%Y-%m-%d")
-
-# 2. КНОПКА ДОБАВЛЕНИЯ
-st.write("")
-if sac.buttons([sac.ButtonsItem(label='Добавить упражнение', icon='plus-lg')], align='center', variant='filled', color='blue'):
+# Кнопка добавления нового упражнения
+if st.button("🚀 Добавить упражнение", use_container_width=True):
     st.session_state.show_add = True
 
 if st.session_state.get("show_add"):
-    with st.form("add_form"):
-        name = st.text_input("Название (например: Жим)")
-        if st.form_submit_button("Сохранить"):
+    with st.form("add_ex_form"):
+        name = st.text_input("Название упражнения")
+        if st.form_submit_button("Добавить"):
             if target_date not in st.session_state.db["days"]:
                 st.session_state.db["days"][target_date] = []
             st.session_state.db["days"][target_date].append({"name": name, "sets": []})
@@ -90,39 +97,39 @@ if st.session_state.get("show_add"):
             st.session_state.show_add = False
             st.rerun()
 
-st.markdown(f"<div style='color:#8e8e93; font-size:11px; margin-top:10px;'>ДАТА: {target_date}</div>", unsafe_allow_html=True)
+st.markdown("<hr style='margin: 15px 0; border-color: #2c2c2e;'>", unsafe_allow_html=True)
 
-# 3. РЕНДЕР ТРЕНИРОВОК
+# --- СПИСОК УПРАЖНЕНИЙ ---
 day_data = st.session_state.db["days"].get(target_date, [])
 
 if not day_data:
-    st.caption("На этот день ничего не запланировано.")
+    st.markdown("<p style='text-align: center; color: #8e8e93;'>На этот день тренировок нет</p>", unsafe_allow_html=True)
 else:
     for i, ex in enumerate(day_data):
-        # Сама карточка
+        # Красивая карточка через HTML
         st.markdown(f"""
         <div class="ex-card">
             <div class="ex-title">{ex['name']}</div>
         </div>
         """, unsafe_allow_html=True)
         
-        # Подходы и кнопки управления (в колонках, но очень аккуратно)
-        c1, c2 = st.columns([5, 1])
+        # Вывод сетов в виде "баджей"
+        if ex.get('sets'):
+            sets_html = "".join([f'<span class="set-badge">{s["w"]}кг × {s["r"]}</span>' for s in ex['sets']])
+            st.markdown(f"<div>{sets_html}</div>", unsafe_allow_html=True)
         
-        # Красивый вывод подходов
-        sets_list = [f"{s['w']}×{s['r']}" for s in ex.get('sets', [])]
-        c1.markdown(f"<span style='color:#58A6FF; font-size:14px;'>{' | '.join(sets_list) if sets_list else 'Нет подходов'}</span>", unsafe_allow_html=True)
+        # Кнопки управления
+        c1, c2 = st.columns([4, 1])
+        with c1.expander("📝 Добавить подход"):
+            cw, cr, cb = st.columns([2, 2, 1])
+            w = cw.number_input("Кг", 0.0, step=0.5, key=f"w_{i}", label_visibility="collapsed")
+            r = cr.number_input("Р", 0, step=1, key=f"r_{i}", label_visibility="collapsed")
+            if cb.button("➕", key=f"ok_{i}"):
+                ex['sets'].append({"w": str(w), "r": str(r)})
+                save_data(st.session_state.db)
+                st.rerun()
         
         if c2.button("🗑️", key=f"del_{i}"):
             day_data.pop(i)
             save_data(st.session_state.db)
             st.rerun()
-            
-        with st.expander("Добавить подход"):
-            cw, cr, cb = st.columns([2, 2, 1])
-            w = cw.number_input("Кг", 0.0, step=0.5, key=f"w_{i}")
-            r = cr.number_input("Р", 0, step=1, key=f"r_{i}")
-            if cb.button("➕", key=f"ok_{i}"):
-                ex['sets'].append({"w": str(w), "r": str(r)})
-                save_data(st.session_state.db)
-                st.rerun()
