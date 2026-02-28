@@ -1,4 +1,3 @@
 streamlit
 pandas
-aiogram
 streamlit-antd-components
