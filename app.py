@@ -3,81 +3,73 @@ import json
 import os
 from datetime import datetime
 
-st.set_page_config(page_title="Gym Legend", layout="centered")
+# Базовая настройка
+st.set_page_config(page_title="Gym App", layout="centered")
 
-# Чистый CSS без фанатизма, чтобы ничего не плыло
+# Функция данных (максимально простая)
+def get_data():
+    if not os.path.exists("gym_data.json"):
+        with open("gym_data.json", "w") as f: json.dump({"days": {}}, f)
+    with open("gym_data.json", "r") as f: return json.load(f)
+
+def save_data(data):
+    with open("gym_data.json", "w") as f: json.dump(data, f)
+
+# Стили для красоты, но без вреда для верстки
 st.markdown("""
 <style>
-    [data-testid="stHeader"] {display: none;}
-    .block-container {padding-top: 1rem !important;}
-    .stDateInput label {display:none;}
-    .stButton>button {width:100%; border-radius:10px; height:3em;}
-    .ex-box {
-        background-color: #1e2124;
-        padding: 15px;
-        border-radius: 12px;
-        border: 1px solid #333;
-        margin-bottom: 10px;
-    }
+    .stButton>button { width: 100%; border-radius: 10px; height: 3.5rem; margin-bottom: 10px; }
+    .stDateInput div { width: 100%; }
+    .exercise-card { background: #262730; padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 5px solid #ff4b4b; }
 </style>
 """, unsafe_allow_html=True)
 
-def load_data():
-    if os.path.exists("gym_data.json"):
-        with open("gym_data.json", "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {"days": {}}
+st.title("🏋️ Тренировки")
 
-def save_data(d):
-    with open("gym_data.json", "w", encoding="utf-8") as f:
-        json.dump(d, f, ensure_ascii=False, indent=4)
+# 1. Выбор даты (Стандартное мобильное окно)
+selected_date = st.date_input("Выберите день", datetime.now()).strftime("%Y-%m-%d")
 
-data = load_data()
+# 2. Загрузка данных
+data = get_data()
+day_info = data["days"].get(selected_date, {"exercises": []})
 
-st.title("🏋️ Gym Legend")
+# 3. Кнопка добавления упражнения
+if st.button("➕ Добавить новое упражнение"):
+    st.session_state.show_add = True
 
-# ВЫБОР ДАТЫ - одна кнопка, которая открывает календарь
-d = st.date_input("Выбери дату", value=datetime.now())
-sel_date = d.strftime("%Y-%m-%d")
-
-st.info(f"📅 Дата: {sel_date}")
-
-# Кнопка добавить
-if st.button("➕ Добавить упражнение"):
-    st.session_state.add_mode = True
-
-if st.session_state.get("add_mode"):
-    with st.form("new_ex"):
-        name = st.text_input("Название")
+if st.session_state.get("show_add"):
+    with st.form("add_form"):
+        name = st.text_input("Название (например: Жим)")
         if st.form_submit_button("Сохранить"):
-            if sel_date not in data["days"]: data["days"][sel_date] = {"exercises": []}
-            data["days"][sel_date]["exercises"].append({"name": name, "sets": []})
+            if selected_date not in data["days"]: data["days"][selected_date] = {"exercises": []}
+            data["days"][selected_date]["exercises"].append({"name": name, "sets": []})
             save_data(data)
-            st.session_state.add_mode = False
+            st.session_state.show_add = False
             st.rerun()
 
-# Список упражнений
-day_info = data["days"].get(sel_date, {"exercises": []})
+st.write("---")
 
-for i, ex in enumerate(day_info["exercises"]):
-    with st.container():
-        st.markdown(f'<div class="ex-box"><b>{ex["name"].upper()}</b></div>', unsafe_allow_html=True)
+# 4. Список упражнений (одно под другим)
+if not day_info["exercises"]:
+    st.write("На сегодня планов нет")
+else:
+    for i, ex in enumerate(day_info["exercises"]):
+        st.markdown(f"""<div class="exercise-card"><b>{ex['name'].upper()}</b></div>""", unsafe_allow_html=True)
         
-        # Вывод подходов в строчку
-        res = " | ".join([f"{s['w']}x{s['r']}" for s in ex.get('sets', [])])
-        st.caption(res if res else "Нет подходов")
+        # Список подходов
+        for s in ex.get("sets", []):
+            st.write(f"💪 {s['w']} кг x {s['r']} раз")
         
-        col1, col2 = st.columns([4, 1])
-        with col1.expander("Добавить подход"):
-            c_w, c_r = st.columns(2)
-            w = c_w.number_input("Кг", 0.0, step=0.5, key=f"w_{i}")
-            r = c_r.number_input("Повт", 0, step=1, key=f"r_{i}")
-            if st.button("Записать", key=f"btn_{i}"):
+        # Кнопки управления (друг под другом для мобилки)
+        with st.expander("Добавить подход / Удалить"):
+            w = st.number_input("Вес (кг)", 0.0, step=0.5, key=f"w_{i}")
+            r = st.number_input("Повторы", 0, step=1, key=f"r_{i}")
+            if st.button("✅ Записать подход", key=f"save_{i}"):
                 ex["sets"].append({"w": str(w), "r": str(r)})
                 save_data(data)
                 st.rerun()
-        
-        if col2.button("🗑️", key=f"del_{i}"):
-            day_info["exercises"].pop(i)
-            save_data(data)
-            st.rerun()
+            
+            if st.button("🗑️ Удалить упражнение", key=f"del_{i}"):
+                day_info["exercises"].pop(i)
+                save_data(data)
+                st.rerun()
