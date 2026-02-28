@@ -5,48 +5,47 @@ import pandas as pd
 from datetime import datetime, timedelta
 import calendar
 
-st.set_page_config(page_title="Gym Legend Elite", layout="centered")
+st.set_page_config(page_title="Gym Legend Compact", layout="centered")
 
-# --- УЛЬТРА-СТИЛЬНЫЙ CSS ---
+# --- КОМПАКТНЫЙ МОБИЛЬНЫЙ СТИЛЬ ---
 st.markdown("""
 <style>
-    .cal-wrapper {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 4px;
-        background: #161b22;
-        padding: 10px;
-        border-radius: 15px;
-        border: 1px solid #30363d;
+    /* Контейнер для кнопок календаря */
+    [data-testid="column"] {
+        width: calc(14.28% - 4px) !important;
+        flex: 1 1 calc(14.28% - 4px) !important;
+        min-width: calc(14.28% - 4px) !important;
+        padding: 0px !important;
+        margin: 0px !important;
     }
-    .wd-label {
+    
+    /* Сами кнопки: делаем их маленькими квадратами */
+    div.stButton > button {
+        width: 100% !important;
+        aspect-ratio: 1 / 1 !important;
+        height: auto !important;
+        padding: 0px !important;
+        font-size: 12px !important;
+        border-radius: 6px !important;
+        background-color: #1e2124 !important;
+        border: 1px solid #333 !important;
+        line-height: 1 !important;
+        display: block !important;
+    }
+
+    /* Подсветка выбранного дня */
+    div.stButton > button:focus, div.stButton > button:active {
+        border: 1px solid #58A6FF !important;
+        background-color: #262c36 !important;
+    }
+
+    /* Точка под числом прямо в кнопке */
+    .indicator {
+        font-size: 18px;
+        line-height: 0;
+        display: block;
+        margin-top: -10px;
         text-align: center;
-        font-size: 10px;
-        color: #8b949e;
-        font-weight: 600;
-        padding-bottom: 5px;
-    }
-    .day-box {
-        aspect-ratio: 1/1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        background: #21262d;
-        border-radius: 8px;
-        border: 1px solid #30363d;
-        position: relative;
-    }
-    .day-num { font-size: 14px; font-weight: bold; color: #c9d1d9; }
-    .day-dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        margin-top: 4px;
-    }
-    .selected-marker {
-        border: 2px solid #58a6ff !important;
-        background: #262c36 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -56,8 +55,7 @@ def load_data():
     if os.path.exists(path):
         try:
             with open(path, "r", encoding="utf-8") as f:
-                d = json.load(f)
-                d.setdefault("days", {}); d.setdefault("templates", {}); d.setdefault("tmpl_colors", {})
+                d = json.load(f); d.setdefault("days", {}); d.setdefault("templates", {}); d.setdefault("tmpl_colors", {})
                 return d
         except: pass
     return {"days": {}, "templates": {}, "tmpl_colors": {}}
@@ -68,88 +66,79 @@ def save_data(d):
 
 data = load_data()
 
-# --- ЛОГИКА ---
-if 'sel_date' not in st.session_state:
-    st.session_state.sel_date = datetime.now().strftime("%Y-%m-%d")
+# Инициализация даты
+if 'active_date' not in st.session_state:
+    st.session_state.active_date = datetime.now().strftime("%Y-%m-%d")
 
 st.title("🏋️ GYM LEGEND")
 
-# Выбор месяца (компактно)
-c1, c2 = st.columns([2, 1])
-m_idx = c1.selectbox("Месяц", range(1, 13), index=datetime.now().month-1)
-y_val = c2.number_input("Год", value=2026)
+# Выбор месяца (очень компактно)
+c1, c2 = st.columns([3, 2])
+m_idx = c1.selectbox("Месяц", range(1, 13), index=datetime.now().month-1, label_visibility="collapsed")
+y_val = c2.number_input("Год", value=2026, label_visibility="collapsed")
 
-# РЕНДЕР КАЛЕНДАРЯ ЧЕРЕЗ HTML
-st.markdown('<div class="cal-wrapper">', unsafe_allow_html=True)
-# Заголовки
-for wd in ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]:
-    st.markdown(f'<div class="wd-label">{wd}</div>', unsafe_allow_html=True)
+# РЕНДЕР КАЛЕНДАРЯ
+days_abbr = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+cols_h = st.columns(7)
+for i, d_n in enumerate(days_abbr):
+    cols_h[i].markdown(f"<p style='text-align:center; font-size:10px; color:#888; margin:0;'>{d_n}</p>", unsafe_allow_html=True)
 
-cal_obj = calendar.monthcalendar(y_val, m_idx)
-for week in cal_obj:
-    for day in week:
-        if day == 0:
-            st.markdown('<div></div>', unsafe_allow_html=True) # Пустая ячейка
-        else:
+cal = calendar.monthcalendar(y_val, m_idx)
+for week in cal:
+    cols = st.columns(7)
+    for i, day in enumerate(week):
+        if day != 0:
             d_str = f"{y_val}-{m_idx:02d}-{day:02d}"
             
-            # Ищем цвет тренировки
-            dot_color = "transparent"
+            # Определяем маркер тренировки
+            marker = ""
             if d_str in data["days"]:
-                t_name = data["days"][d_str].get("template")
-                dot_color = data["tmpl_colors"].get(t_name, "#58A6FF")
+                tmpl = data["days"][d_str].get("template")
+                color = data["tmpl_colors"].get(tmpl, "#58A6FF")
+                # Используем спецсимвол точки с нужным цветом
+                marker = f"\n\n<span class='indicator' style='color:{color};'>.</span>"
             
-            # Выделение выбранного дня
-            is_sel = "selected-marker" if d_str == st.session_state.sel_date else ""
+            # Кнопка. Название содержит число и (если есть) точку через HTML
+            if cols[i].button(f"{day}", key=f"btn_{d_str}"):
+                st.session_state.active_date = d_str
             
-            # Рисуем ячейку
-            st.markdown(f"""
-                <div class="day-box {is_sel}">
-                    <div class="day-num">{day}</div>
-                    <div class="day-dot" style="background: {dot_color}"></div>
-                </div>
-            """, unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True)
-
-# Чтобы "нажимать" на даты на мобилке, добавим аккуратный слайдер под календарем
-days_in_month = calendar.monthrange(y_val, m_idx)[1]
-day_sel = st.select_slider("Переключить дату:", options=range(1, days_in_month + 1), value=int(st.session_state.sel_date.split('-')[-1]))
-st.session_state.sel_date = f"{y_val}-{m_idx:02d}-{day_sel:02d}"
+            if marker:
+                cols[i].markdown(marker, unsafe_allow_html=True)
 
 st.divider()
 
-# --- РАБОТА С УПРАЖНЕНИЯМИ ---
-curr_d = st.session_state.sel_date
-st.subheader(f"📅 Дата: {curr_d}")
+# РАБОТА С ВЫБРАННЫМ ДНЕМ
+sel_d = st.session_state.active_date
+st.subheader(f"📅 {sel_d}")
 
-day_info = data["days"].get(curr_d, {"exercises": []})
+day_info = data["days"].get(sel_d, {"exercises": []})
 ex_list = day_info.get("exercises", [])
 
 if ex_list:
     for i, ex in enumerate(ex_list):
         with st.container(border=True):
-            cols = st.columns([4, 1])
-            cols[0].write(f"**{ex['name'].upper()}**")
-            if cols[1].button("❌", key=f"del_{i}"):
+            col_t, col_d = st.columns([5, 1])
+            col_t.write(f"**{ex['name'].upper()}**")
+            if col_d.button("🗑️", key=f"del_{i}"):
                 ex_list.pop(i); save_data(data); st.rerun()
             
             for s in ex.get("sets", []):
-                st.caption(f"💪 {s['w']} кг x {s['r']}")
+                st.caption(f"🔹 {s['w']} кг x {s['r']}")
             
-            with st.popover("Добавить сет"):
+            with st.expander("Добавить подход"):
                 cw, cr = st.columns(2)
                 w = cw.number_input("Кг", 0.0, step=0.5, key=f"w_{i}")
                 r = cr.number_input("Раз", 0, step=1, key=f"r_{i}")
-                if st.button("ОК", key=f"s_{i}"):
+                if st.button("ОК", key=f"ok_{i}"):
                     ex["sets"].append({"w": str(w), "r": str(r)})
                     save_data(data); st.rerun()
 else:
-    st.info("Нет записей. Выбери дату ползунком выше.")
+    st.info("Нет записей.")
 
 with st.popover("🚀 Добавить упражнение", use_container_width=True):
-    new_ex = st.text_input("Название")
+    n_ex = st.text_input("Название")
     if st.button("Внести"):
-        if new_ex:
-            if curr_d not in data["days"]: data["days"][curr_d] = {"template": None, "exercises": []}
-            data["days"][curr_d]["exercises"].append({"name": new_ex.strip(), "sets": []})
+        if n_ex:
+            if sel_d not in data["days"]: data["days"][sel_d] = {"template": None, "exercises": []}
+            data["days"][sel_d]["exercises"].append({"name": n_ex.strip(), "sets": []})
             save_data(data); st.rerun()
