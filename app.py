@@ -4,55 +4,79 @@ import os
 from datetime import datetime
 
 # Настройка страницы
-st.set_page_config(page_title="Gym Legend", layout="centered")
+st.set_page_config(page_title="Gym Legend Ultra", layout="centered")
 
-# --- СТИЛИЗАЦИЯ ПОД APPLE HEALTH ---
+# --- ФОН И КАРТОЧКИ (ПОЛНЫЙ РЕДИЗАЙН) ---
 st.markdown("""
 <style>
     [data-testid="stHeader"] { display: none; }
-    .block-container { padding-top: 1rem !important; max-width: 450px !important; }
-    .stApp { background-color: #000000; }
+    .stApp { background-color: #050505; }
+    .block-container { padding-top: 2rem !important; max-width: 400px !important; }
     
-    /* Стилизация календаря */
-    .stDateInput div[data-baseweb="input"] {
-        background-color: #1c1c1e !important;
-        border: 1px solid #2c2c2e !important;
-        border-radius: 12px !important;
-        color: white !important;
+    /* Стилизация заголовка */
+    .main-title {
+        font-size: 32px;
+        font-weight: 900;
+        color: #ffffff;
+        text-align: center;
+        letter-spacing: -1px;
+        margin-bottom: 20px;
+        text-shadow: 0 0 15px rgba(88, 166, 255, 0.4);
     }
 
-    /* Карточка упражнения */
-    .ex-card {
-        background: #1c1c1e;
-        border-radius: 15px;
-        padding: 16px;
-        margin-top: 12px;
-        border: 1px solid #2c2c2e;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    /* Нативный календарь как стильная кнопка */
+    .stDateInput div[data-baseweb="input"] {
+        background-color: #161b22 !important;
+        border: 2px solid #30363d !important;
+        border-radius: 15px !important;
+        height: 50px !important;
+        color: #58a6ff !important;
+        font-weight: bold !important;
     }
-    .ex-title { 
-        color: #ffffff; 
-        font-weight: 800; 
-        font-size: 18px; 
-        letter-spacing: -0.5px;
-        margin-bottom: 8px;
+
+    /* КАРТОЧКА УПРАЖНЕНИЯ */
+    .exercise-card {
+        background: linear-gradient(145deg, #161b22, #0d1117);
+        border: 1px solid #30363d;
+        border-radius: 20px;
+        padding: 20px;
+        margin-top: 15px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+    }
+    .exercise-header {
+        color: #58a6ff;
+        font-size: 18px;
+        font-weight: 800;
         text-transform: uppercase;
+        margin-bottom: 10px;
+        border-left: 4px solid #58a6ff;
+        padding-left: 10px;
     }
-    .set-badge {
-        background: #2c2c2e;
-        color: #58A6FF;
-        padding: 4px 10px;
-        border-radius: 8px;
-        font-size: 13px;
-        margin-right: 5px;
+
+    /* Подходы (Баджи) */
+    .set-tag {
+        background: #21262d;
+        color: #f0f6fc;
+        padding: 6px 12px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-family: monospace;
+        margin: 3px;
         display: inline-block;
-        margin-bottom: 5px;
+        border: 1px solid #30363d;
     }
-    
+
     /* Кнопки */
     .stButton>button {
-        border-radius: 12px !important;
-        font-weight: 600 !important;
+        border-radius: 15px !important;
+        background-color: #21262d !important;
+        color: white !important;
+        border: 1px solid #30363d !important;
+        transition: 0.3s;
+    }
+    .stButton>button:active {
+        transform: scale(0.95);
+        border-color: #58a6ff !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -75,56 +99,54 @@ def save_data(data):
 if 'db' not in st.session_state:
     st.session_state.db = load_data()
 
-# --- ВЕРХНЯЯ ЧАСТЬ ---
-st.markdown("<h1 style='text-align: center; color: white; font-size: 24px;'>GYM LEGEND</h1>", unsafe_allow_html=True)
+# --- ИНТЕРФЕЙС ---
+st.markdown("<div class='main-title'>LEGEND BORN</div>", unsafe_allow_html=True)
 
-# Календарь (тот самый, удобный)
-d = st.date_input("Выбор даты", value=datetime.now(), label_visibility="collapsed")
+# Календарь
+d = st.date_input("DATE", value=datetime.now(), label_visibility="collapsed")
 target_date = d.strftime("%Y-%m-%d")
 
-# Кнопка добавления нового упражнения
-if st.button("🚀 Добавить упражнение", use_container_width=True):
-    st.session_state.show_add = True
+# Добавление
+if st.button("➕ ДОБАВИТЬ ТРЕНИРОВКУ", use_container_width=True):
+    st.session_state.add_mode = True
 
-if st.session_state.get("show_add"):
-    with st.form("add_ex_form"):
+if st.session_state.get("add_mode"):
+    with st.form("new_ex"):
         name = st.text_input("Название упражнения")
-        if st.form_submit_button("Добавить"):
+        if st.form_submit_button("СОХРАНИТЬ"):
             if target_date not in st.session_state.db["days"]:
                 st.session_state.db["days"][target_date] = []
             st.session_state.db["days"][target_date].append({"name": name, "sets": []})
             save_data(st.session_state.db)
-            st.session_state.show_add = False
+            st.session_state.add_mode = False
             st.rerun()
 
-st.markdown("<hr style='margin: 15px 0; border-color: #2c2c2e;'>", unsafe_allow_html=True)
-
-# --- СПИСОК УПРАЖНЕНИЙ ---
+# Рендер упражнений
 day_data = st.session_state.db["days"].get(target_date, [])
 
 if not day_data:
-    st.markdown("<p style='text-align: center; color: #8e8e93;'>На этот день тренировок нет</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center; color:#8b949e; margin-top:30px;'>Сегодня день отдыха 🧘</p>", unsafe_allow_html=True)
 else:
     for i, ex in enumerate(day_data):
-        # Красивая карточка через HTML
+        # Отрисовка карточки
         st.markdown(f"""
-        <div class="ex-card">
-            <div class="ex-title">{ex['name']}</div>
+        <div class="exercise-card">
+            <div class="exercise-header">{ex['name']}</div>
         </div>
         """, unsafe_allow_html=True)
         
-        # Вывод сетов в виде "баджей"
+        # Подходы
         if ex.get('sets'):
-            sets_html = "".join([f'<span class="set-badge">{s["w"]}кг × {s["r"]}</span>' for s in ex['sets']])
-            st.markdown(f"<div>{sets_html}</div>", unsafe_allow_html=True)
+            sets_html = "".join([f'<div class="set-tag">{s["w"]}kg × {s["r"]}</div>' for s in ex['sets']])
+            st.markdown(f"<div style='margin-bottom:10px;'>{sets_html}</div>", unsafe_allow_html=True)
         
-        # Кнопки управления
+        # Управление
         c1, c2 = st.columns([4, 1])
-        with c1.expander("📝 Добавить подход"):
-            cw, cr, cb = st.columns([2, 2, 1])
-            w = cw.number_input("Кг", 0.0, step=0.5, key=f"w_{i}", label_visibility="collapsed")
-            r = cr.number_input("Р", 0, step=1, key=f"r_{i}", label_visibility="collapsed")
-            if cb.button("➕", key=f"ok_{i}"):
+        with c1.expander("📝 ДОБАВИТЬ СЕТ"):
+            col_w, col_r, col_b = st.columns([2, 2, 1])
+            w = col_w.number_input("Кг", 0.0, step=0.5, key=f"w_{i}", label_visibility="collapsed")
+            r = col_r.number_input("Р", 0, step=1, key=f"r_{i}", label_visibility="collapsed")
+            if col_b.button("➕", key=f"ok_{i}"):
                 ex['sets'].append({"w": str(w), "r": str(r)})
                 save_data(st.session_state.db)
                 st.rerun()
